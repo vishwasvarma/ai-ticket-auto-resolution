@@ -1,23 +1,18 @@
-import requests
 import os
 from dotenv import load_dotenv
-from pathlib import Path
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-HF_TOKEN = os.getenv("HF_TOKEN")
-print(HF_TOKEN)
+from groq import Groq
 
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+load_dotenv()
 
-headers = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
+client = Groq(
+    api_key = os.getenv("GROQ_API_KEY")
+)
 
 def generate_response(ticket, solutions):
     solutions_text = "\n".join([f"- {s}" for s in solutions])
 
     prompt = f"""
 You are an IT support assistant.
-
 User issue:
 {ticket}
 
@@ -26,31 +21,19 @@ Possible solutions:
 
 Give a short and clear solution (2-3 sentences).
 """
-
+    
     try:
-        response = requests.post(
-            API_URL,
-            headers=headers,
-            json={"inputs": prompt},
-            timeout=10
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {
+                    "role":"user",
+                    "content":prompt,
+                }
+            ],
+            model = "llama-3.3-70b-versatile",
         )
-
-        print(response.status_code)
-        print(response.text)
-
-        result = response.json()
-
-        # Handle HF errors
-        if isinstance(result, dict) and "error" in result:
-            print("HF ERROR:", result)
-            return solutions[0]
-
-        # Extract response properly
-        if isinstance(result, list):
-            return result[0].get("generated_text", solutions[0])
-
-        return solutions[0]
+        return chat_completion.choices[0].message.content
 
     except Exception as e:
-        print("Exception:", e)
+        print("GROQ ERROR:", e)
         return solutions[0]
