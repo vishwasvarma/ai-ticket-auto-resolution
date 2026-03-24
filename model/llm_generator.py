@@ -12,14 +12,22 @@ def generate_response(ticket, solutions):
     solutions_text = "\n".join([f"- {s}" for s in solutions])
 
     prompt = f"""
-You are an IT support assistant.
-User issue:
+You are an IT Support Assistant.
+
+User Issue:
 {ticket}
 
-Possible solutions:
+Retrieved Solutions:
 {solutions_text}
 
-Give a short and clear solution (2-3 sentences).
+Instructions:
+- Generate a concise solution
+- Be technical but easy to understand
+- Provide step-by-step guidance if needed
+- Do not repeat retrieved solutions verbatim
+- Limit to 2–3 sentences
+
+Final Answer:
 """
     
     try:
