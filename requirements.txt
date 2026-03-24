@@ -7,3 +7,4 @@ sentence-transformers
 sqlalchemy
 openai
 requests
+groq
