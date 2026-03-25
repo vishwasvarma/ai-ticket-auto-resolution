@@ -34,6 +34,7 @@ def solve_ticket(ticket_text):
             # High confidence → no LLM
             return {
                 "category": category,
+                "confidence": classifier_confidence,
                 "response": best_solution
             }
 
@@ -48,12 +49,14 @@ def solve_ticket(ticket_text):
 
             return {
                 "category": category,
+                "confidence": classifier_confidence,
                 "response": llm_response
                 }
         
         else:
             return {
                 "category": category,
+                "confidence": classifier_confidence,
                 "response": "The issue requires further investigation. Please contact IT support for assistance."
                 }
 
