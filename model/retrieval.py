@@ -9,23 +9,26 @@ tickets = data["tickets"]
 answers = data["answers"]
 ticket_embeddings = data["embeddings"]
 
-
-## Loading the model
+# Load embedding model
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
 print("Embeddings loaded successfully")
 
+
 def retrieve_solution(user_ticket):
 
-    ## Encoding the user ticket
-    query_embedding = model.encode(user_ticket, convert_to_tensor = True)
+    # Encode query
+    query_embedding = model.encode(
+        user_ticket,
+        convert_to_tensor=True
+    )
 
-    ## Computing the similarity
-    scores = util.cos_sim(query_embedding, ticket_embeddings)
+    # Compute similarity
+    scores = util.cos_sim(query_embedding, ticket_embeddings)[0]
 
-    # getting top 3 similar tickets
+    # Top 3 similar tickets
     top_k = 3
-    top_results = scores[0].topk(k=top_k)
+    top_results = scores.topk(k=top_k)
 
     solutions = []
     similarity_scores = []
