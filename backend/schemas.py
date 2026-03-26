@@ -2,12 +2,10 @@ from pydantic import BaseModel
 
 
 class LoginSchema(BaseModel):
-    email: str
+    username: str
     password: str
 
 
-class TicketCreate(BaseModel):
+class TicketCreateSchema(BaseModel):
     title: str
     description: str
-    user_id: int
-    type: str

@@ -1,55 +1,105 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.models import Ticket
-from backend.schemas import TicketCreate
+from backend.schemas import TicketCreateSchema
 from model.ai_engine import solve_ticket
-from datetime import datetime
+import random
+import string
 
-router = APIRouter()
-
-
-
-def generate_ticket_number(db: Session):
-
-    year = datetime.now().year
-
-    # Count existing tickets
-    count = db.query(Ticket).count() + 1
-
-    return f"TICK-{year}-{str(count).zfill(4)}"
+router = APIRouter(prefix="/tickets", tags=["Tickets"])
 
 
-@router.post("/tickets")
-def create_ticket(data: TicketCreate, db: Session = Depends(get_db)):
+def generate_ticket_number():
+    return "TCK" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
-    # Generate ticket number
-    ticket_number = generate_ticket_number(db)
 
-    # AI response
-    result = solve_ticket(data.description)
+def decide_status(confidence):
+    if confidence >= 55:
+        return "resolved"
+    elif confidence >= 40:
+        return "open"
+    else:
+        return "needs_attention"
 
-    confidence = result.get("Confidence Score", 0)
-    status = "CLOSED" if confidence > 60 else "ACTION_REQUIRED"
 
-    ticket = Ticket(
-        ticket_number=ticket_number,   # ✅ NEW
-        title=data.title,
-        description=data.description,
-        response=result.get("response", ""),
-        category=result.get("category", "Unknown"),
-        status=status,
-        user_id=data.user_id,
-        type=data.type
-    )
+@router.post("/create")
+def create_ticket(data: TicketCreateSchema, db: Session = Depends(get_db)):
 
-    db.add(ticket)
+    try:
+        ticket_number = generate_ticket_number()
+
+        ai_result = solve_ticket(data.description)
+
+        category = "Unknown"
+        response = "No response"
+        confidence = 0
+
+        if isinstance(ai_result, dict):
+            category = ai_result.get("category", "Unknown")
+            response = ai_result.get("response", "No response")
+
+            confidence = (
+                ai_result.get("Confidence Score")
+                or ai_result.get("confidence")
+                or 0
+            )
+
+        status = decide_status(float(confidence))
+
+        new_ticket = Ticket(
+            ticket_number=ticket_number,
+            title=data.title,
+            description=data.description,
+            category=str(category),
+            response=str(response),
+            status=status
+        )
+
+        db.add(new_ticket)
+        db.commit()
+        db.refresh(new_ticket)
+
+        return {
+            "ticket_number": ticket_number,
+            "category": category,
+            "response": response
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("")
+def get_tickets(
+    status: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    query = db.query(Ticket)
+
+    if status:
+        query = query.filter(Ticket.status == status)
+
+    return query.all()
+
+
+@router.get("/{ticket_number}")
+def get_ticket(ticket_number: str, db: Session = Depends(get_db)):
+    return db.query(Ticket).filter(Ticket.ticket_number == ticket_number).first()
+
+
+@router.patch("/{ticket_number}")
+def update_ticket(ticket_number: str, response: str, status: str, db: Session = Depends(get_db)):
+
+    ticket = db.query(Ticket).filter(Ticket.ticket_number == ticket_number).first()
+
+    if not ticket:
+        return {"error": "Ticket not found"}
+
+    ticket.response = response
+    ticket.status = status
+
     db.commit()
     db.refresh(ticket)
 
-    return {
-        "ticket_number": ticket.ticket_number,
-        "title": ticket.title,
-        "status": ticket.status,
-        "response": ticket.response
-    }
+    return {"message": "Ticket updated successfully"}
