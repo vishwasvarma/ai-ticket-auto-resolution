@@ -1,40 +1,45 @@
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 import { useState } from "react";
 import API from "../services/api";
 
 export default function Login({ setUser }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLogin = async () => {
     if (!username || !password) {
-      alert("Enter username and password");
+      setError("Enter username and password");
       return;
     }
-
+    setLoading(true);
+    setError("");
     try {
       const res = await API.post("/login", {
         username: username,
         password: password,
       });
-
       setUser(res.data);
     } catch (err) {
-      console.log(err.response?.data);
-      alert("Login failed");
+      setError("Login failed");
     }
+    setLoading(false);
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2>AI Ticket Resolution</h2>
-        <p style={{ color: "#9ca3af" }}>Login to continue</p>
+        <h2 style={{ color: '#e5e7eb', marginBottom: 8 }}>AI Ticket Resolution</h2>
+        <p style={{ color: "#9ca3af", marginBottom: 18 }}>Login to continue</p>
 
         <input
           style={styles.input}
           placeholder="Enter username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
+          disabled={loading}
         />
 
         <input
@@ -43,11 +48,13 @@ export default function Login({ setUser }) {
           placeholder="Enter password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
         />
 
-        <button style={styles.button} onClick={handleLogin}>
-          Login
+        <button style={styles.button} onClick={handleLogin} disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
         </button>
+        {error && <div style={{ color: '#ef4444', marginTop: 12 }}>{error}</div>}
       </div>
     </div>
   );
