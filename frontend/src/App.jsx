@@ -1,41 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Login from "./pages/Login";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("user");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem("user", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("user");
-    }
-  }, [user]);
-
-  if (!user) return (
-    <div style={{ background: '#0f172a', minHeight: '100vh' }}>
-      <Login setUser={setUser} />
-    </div>
-  );
+  if (!user) return <Login setUser={setUser} />;
 
   if (user.role === "ADMIN") {
-    return (
-      <div style={{ background: '#0f172a', minHeight: '100vh' }}>
-        <AdminDashboard user={user} />
-      </div>
-    );
+    return <AdminDashboard user={user} />;
   }
 
-  return (
-    <div style={{ background: '#0f172a', minHeight: '100vh' }}>
-      <UserDashboard user={user} />
-    </div>
-  );
+  return <UserDashboard user={user} />;
 }
 
 export default App;
