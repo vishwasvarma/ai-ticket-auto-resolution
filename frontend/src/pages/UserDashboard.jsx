@@ -8,12 +8,8 @@ export default function UserDashboard({ user }) {
   const [aiResponse, setAiResponse] = useState(null);
 
   const fetchTickets = async () => {
-    try {
-      const res = await API.get("/tickets/my");
-      setTickets(res.data);
-    } catch (err) {
-      console.log(err);
-    }
+    const res = await API.get("/tickets/my");
+    setTickets(res.data);
   };
 
   const createTicket = async () => {
@@ -22,20 +18,12 @@ export default function UserDashboard({ user }) {
       return;
     }
 
-    try {
-      const res = await API.post("/tickets/create", {
-        title,
-        description,
-      });
+    const res = await API.post("/tickets/create", { title, description });
 
-      setAiResponse(res.data);
-      setTitle("");
-      setDescription("");
-      fetchTickets();
-    } catch (err) {
-      console.log(err.response?.data);
-      alert("Error creating ticket");
-    }
+    setAiResponse(res.data);
+    setTitle("");
+    setDescription("");
+    fetchTickets();
   };
 
   useEffect(() => {
@@ -43,9 +31,23 @@ export default function UserDashboard({ user }) {
   }, []);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h2>User Dashboard</h2>
+    <div
+      style={{
+        padding: "30px",
+        background: "#0f172a",
+        minHeight: "100vh",
+        color: "white",
+      }}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "20px",
+        }}
+      >
+        <h1>User Dashboard</h1>
         <button
           onClick={() => {
             localStorage.removeItem("token");
@@ -56,33 +58,45 @@ export default function UserDashboard({ user }) {
         </button>
       </div>
 
-      <div style={{ marginTop: "20px" }}>
+      {/* CREATE TICKET CARD */}
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "20px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <h2>Create New Ticket</h2>
+
         <input
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          style={{ display: "block", marginBottom: "10px", width: "300px" }}
+          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
         />
 
-        <input
+        <textarea
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          style={{ display: "block", marginBottom: "10px", width: "300px" }}
+          style={{ width: "100%", padding: "10px", margin: "10px 0" }}
         />
 
-        <button onClick={createTicket}>Create Ticket</button>
+        <button onClick={createTicket}>Submit Ticket</button>
       </div>
 
+      {/* AI RESPONSE */}
       {aiResponse && (
         <div
           style={{
-            border: "1px solid gray",
-            marginTop: "20px",
-            padding: "10px",
+            background: "#1e293b",
+            padding: "20px",
+            borderRadius: "10px",
+            marginBottom: "20px",
           }}
         >
-          <h3>AI Response</h3>
+          <h2>AI Resolution</h2>
           <p>
             <b>Category:</b> {aiResponse.category}
           </p>
@@ -95,24 +109,26 @@ export default function UserDashboard({ user }) {
         </div>
       )}
 
-      <h3 style={{ marginTop: "30px" }}>My Tickets</h3>
+      {/* MY TICKETS */}
+      <div>
+        <h2>My Tickets</h2>
 
-      {tickets.map((t) => (
-        <div
-          key={t.ticket_number}
-          style={{
-            border: "1px solid gray",
-            margin: "10px 0",
-            padding: "10px",
-          }}
-        >
-          <p>
-            <b>{t.title}</b>
-          </p>
-          <p>Status: {t.status}</p>
-          <p>Category: {t.category}</p>
-        </div>
-      ))}
+        {tickets.map((t) => (
+          <div
+            key={t.ticket_number}
+            style={{
+              background: "#1e293b",
+              padding: "15px",
+              borderRadius: "10px",
+              marginTop: "10px",
+            }}
+          >
+            <h3>{t.title}</h3>
+            <p>Status: {t.status}</p>
+            <p>Category: {t.category}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

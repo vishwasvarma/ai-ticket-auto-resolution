@@ -6,18 +6,14 @@ export default function AdminDashboard({ user }) {
   const [filter, setFilter] = useState("all");
 
   const fetchTickets = async () => {
-    try {
-      let url = "/tickets";
+    let url = "/tickets";
 
-      if (filter !== "all") {
-        url += `?status=${filter}`;
-      }
-
-      const res = await API.get(url);
-      setTickets(res.data);
-    } catch (err) {
-      console.log(err);
+    if (filter !== "all") {
+      url += `?status=${filter}`;
     }
+
+    const res = await API.get(url);
+    setTickets(res.data);
   };
 
   useEffect(() => {
@@ -25,9 +21,23 @@ export default function AdminDashboard({ user }) {
   }, [filter]);
 
   return (
-    <div style={{ padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h2>Admin Dashboard</h2>
+    <div
+      style={{
+        padding: "30px",
+        background: "#0f172a",
+        minHeight: "100vh",
+        color: "white",
+      }}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: "20px",
+        }}
+      >
+        <h1>Admin Dashboard</h1>
         <button
           onClick={() => {
             localStorage.removeItem("token");
@@ -38,41 +48,40 @@ export default function AdminDashboard({ user }) {
         </button>
       </div>
 
-      <div style={{ marginTop: "20px" }}>
-        <button
-          onClick={() => setFilter("all")}
-          style={{ marginRight: "10px" }}
-        >
-          All
-        </button>
+      {/* FILTER TABS */}
+      <div style={{ marginBottom: "20px" }}>
+        <button onClick={() => setFilter("all")}>All</button>
         <button
           onClick={() => setFilter("resolved")}
-          style={{ marginRight: "10px" }}
+          style={{ marginLeft: "10px" }}
         >
           Closed
         </button>
-        <button onClick={() => setFilter("open")}>Unresolved</button>
+        <button
+          onClick={() => setFilter("open")}
+          style={{ marginLeft: "10px" }}
+        >
+          Unresolved
+        </button>
       </div>
 
-      <div style={{ marginTop: "20px" }}>
-        {tickets.map((t) => (
-          <div
-            key={t.ticket_number}
-            style={{
-              border: "1px solid gray",
-              margin: "10px 0",
-              padding: "10px",
-            }}
-          >
-            <p>
-              <b>{t.title}</b>
-            </p>
-            <p>Status: {t.status}</p>
-            <p>Category: {t.category}</p>
-            <p>Ticket No: {t.ticket_number}</p>
-          </div>
-        ))}
-      </div>
+      {/* TICKETS LIST */}
+      {tickets.map((t) => (
+        <div
+          key={t.ticket_number}
+          style={{
+            background: "#1e293b",
+            padding: "15px",
+            borderRadius: "10px",
+            marginBottom: "10px",
+          }}
+        >
+          <h3>{t.title}</h3>
+          <p>Status: {t.status}</p>
+          <p>Category: {t.category}</p>
+          <p>Ticket No: {t.ticket_number}</p>
+        </div>
+      ))}
     </div>
   );
 }
