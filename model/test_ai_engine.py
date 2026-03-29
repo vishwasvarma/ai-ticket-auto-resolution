@@ -1,4 +1,4 @@
-from ai_engine import solve_ticket
+from model.ai_engine import solve_ticket
 
 test_cases = [
 
