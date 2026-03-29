@@ -44,6 +44,13 @@ This significantly reduces manual effort and improves response time.
 
 ---
 
+# Contributors
+```
+- Manoj Royal - https://github.com/manojcodes93  
+- Vishwas - https://github.com/vishwasvarma
+```
+---
+
 # Project Highlights
 
 - RAG-Based AI Architecture  
@@ -54,11 +61,18 @@ This significantly reduces manual effort and improves response time.
 - Automatic Response Generation  
 - Confidence-Based Manual Review  
 - Spell Correction for Noisy Input  
-- Admin Dashboard (API Ready)  
+- Admin Dashboard (Full UI Implemented)  
+- User Dashboard (Full UI Implemented)  
 - Ticket Status Management  
 - Unique Ticket ID Generation  
 - User Ticket History  
 - Role-Based Access (Admin/User)  
+- React Frontend Integration  
+- JWT Authentication  
+- Logout & Session Handling  
+- Ticket Filtering (All / Closed / Unresolved)  
+- AI Response Display  
+- Professional Dashboard UI  
 
 ---
 
@@ -70,23 +84,30 @@ This significantly reduces manual effort and improves response time.
 - Automatic Response Generation  
 - Confidence-Based Manual Review  
 - Spell Correction for Noisy Input  
-- Admin Dashboard (API Ready)  
+- Admin Dashboard UI  
+- User Dashboard UI  
 - Ticket Status Management  
 - Unique Ticket ID Generation  
 - User Ticket History  
 - Role-Based Access (Admin/User)  
+- AI Confidence‑based Decision  
+- Ticket Filtering  
+- Ticket Response View  
+- Logout Functionality  
 
 ---
 
 # Tech Stack
 
-## Backend
+## Frontend
+- React.js 
+- Modern Dashboard UI  
 
+## Backend
 - FastAPI  
 - Python  
 
 ## Database
-
 - PostgreSQL  
 - SQLAlchemy ORM  
 
@@ -212,8 +233,7 @@ Auto Resolution / Manual Review
 
 # Dataset Used
 
-Dataset Source:
-
+Dataset Source:  
 https://huggingface.co/datasets/KameronB/synthetic-it-callcenter-tickets
 
 Dataset includes:
@@ -240,7 +260,7 @@ Dataset Size:
 
 User  
 ↓  
-Frontend (React - Future)  
+React Frontend  
 ↓  
 FastAPI Backend  
 ↓  
@@ -257,8 +277,18 @@ PostgreSQL Database
 # Folder Structure
 
 ```
-
 ai-ticket-auto-resolution/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── UserDashboard.jsx
+│   │   │   └── AdminDashboard.jsx
+│   │   ├── services/
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │
 ├── backend/
 │   ├── main.py
@@ -283,10 +313,10 @@ ai-ticket-auto-resolution/
 │   ├── tuning.py
 │   └── test_ai_engine.py
 │
+├── test_cases.pdf
+│
 ├── requirements.txt
-├── .env
 └── README.md
-
 ```
 
 ---
@@ -310,7 +340,7 @@ ai-ticket-auto-resolution/
 | Column | Type |
 |--------|------|
 | id | Integer |
-| ticket_no | String |
+| ticket_number | String |
 | title | String |
 | description | Text |
 | category | String |
@@ -338,12 +368,10 @@ Closed
 # Requirements
 
 ```
-
 fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
-python-dotenv
 pydantic
 sentence-transformers
 scikit-learn
@@ -352,19 +380,6 @@ pandas
 pyspellchecker
 requests
 openai
-
-```
-
----
-
-# Environment Variables
-
-Create `.env` file
-
-```
-
-DATABASE_URL=postgresql://postgres:09876@localhost:5432/ai_ticket_handling
-
 ```
 
 ---
@@ -374,10 +389,8 @@ DATABASE_URL=postgresql://postgres:09876@localhost:5432/ai_ticket_handling
 ## Step 1 — Clone Repository
 
 ```
-
 git clone https://github.com/manojcodes93/ai-ticket-auto-resolution
 cd ai-ticket-auto-resolution
-
 ```
 
 ---
@@ -385,17 +398,13 @@ cd ai-ticket-auto-resolution
 ## Step 2 — Create Virtual Environment
 
 ```
-
 python -m venv myvenv
-
 ```
 
 Activate
 
 ```
-
 myvenv\Scripts\activate
-
 ```
 
 ---
@@ -403,9 +412,7 @@ myvenv\Scripts\activate
 ## Step 3 — Install Dependencies
 
 ```
-
 pip install -r requirements.txt
-
 ```
 
 ---
@@ -415,9 +422,7 @@ pip install -r requirements.txt
 Create Database
 
 ```
-
 ai_ticket_handling
-
 ```
 
 ---
@@ -425,9 +430,7 @@ ai_ticket_handling
 ## Step 5 — Generate Embeddings
 
 ```
-
 python model/build_embeddings.py
-
 ```
 
 ---
@@ -435,19 +438,17 @@ python model/build_embeddings.py
 ## Step 6 — Run Backend
 
 ```
-
 uvicorn backend.main:app --reload
-
 ```
 
 ---
 
-## Step 7 — Open Swagger
+## Step 7 — Run Frontend
 
 ```
-
-http://127.0.0.1:8000/docs
-
+cd frontend
+npm install
+npm run dev
 ```
 
 ---
@@ -469,15 +470,15 @@ POST
 GET  
 /tickets/my  
 
-## Admin Get All Tickets
+## Admin Get Tickets
 
 GET  
-/tickets/all  
+/tickets  
 
 ## Update Ticket
 
 PATCH  
-/tickets/update  
+/tickets/{ticket_number}
 
 ---
 
@@ -486,9 +487,7 @@ PATCH
 Example
 
 ```
-
 TCKA83F29X
-
 ```
 
 Generated using:
@@ -519,8 +518,9 @@ Auto Response / Manual Review
 
 | Score | Action |
 |-------|--------|
-| ≥ 45% | Auto Response |
-| < 45% | Manual Review |
+| ≥ 55% | Resolved |
+| 40–55% | Open |
+| < 40% | Needs Attention |
 
 ---
 
@@ -534,14 +534,21 @@ Average Response Time
 
 ---
 
-# Future Improvements
+# Test Cases
 
-- React Frontend  
-- JWT Authentication  
-- Real Time Updates  
-- Admin Dashboard UI  
-- Feedback Loop Training  
-- Model Fine-tuning  
+Test cases included for:
+
+- API Testing  
+- AI Model Testing  
+- Ticket Creation  
+- Authentication Testing  
+- Retrieval Testing  
+
+Test cases located in:
+
+```
+https://github.com/manojcodes93/ai-ticket-auto-resolution/blob/main/test_cases.pdf
+```
 
 ---
 
@@ -549,25 +556,15 @@ Average Response Time
 
 - RAG-Based AI Architecture  
 - Real-world enterprise use case  
-- AI + Backend integration  
+- AI + Full Stack Integration  
 - Hybrid ML + Semantic Retrieval  
 - Production-ready architecture  
 - Scalable design  
+- Admin + User UI  
+- JWT Authentication  
 
 ---
 
-# Contributors
-
-- https://github.com/manojcodes93  
-- https://github.com/vishwasvarma  
-
----
-
-# License
-
-MIT License
-
----
 
 # Final Outcome
 
@@ -585,15 +582,83 @@ This system improves:
 
 ---
 
-# Demo
+# Future Improvements
 
-Backend Running
+## Admin Enhancements
 
-http://127.0.0.1:8000
-
-Swagger UI
-
-http://127.0.0.1:8000/docs
+- Admin manual response override  
+- Admin editing AI responses  
+- Ticket reassignment  
+- Priority‑based handling  
 
 ---
-```
+
+## User Management
+
+- Multiple user accounts  
+- Role-based access  
+- Account creation  
+- Account deletion  
+
+---
+
+## UI Improvements
+
+- Professional UI  
+- Sidebar navigation  
+- Analytics dashboard  
+- Responsive layout  
+
+---
+
+## AI Improvements
+
+- Model fine‑tuning  
+- Feedback learning  
+- Multi‑language support  
+
+---
+
+## Enterprise Features
+
+- Multi‑tenant support  
+- SLA tracking  
+- Audit logs  
+
+---
+
+# Roadmap
+
+## Phase 1
+
+- Admin response system  
+- Multiple users  
+- Account management  
+
+## Phase 2
+
+- Advanced UI  
+- Analytics  
+- Notifications  
+
+## Phase 3
+
+- AI improvements  
+- Enterprise features  
+- Cloud deployment  
+
+---
+
+# GitHub
+
+Project Repository  
+https://github.com/manojcodes93/ai-ticket-auto-resolution
+
+Dataset  
+https://huggingface.co/datasets/KameronB/synthetic-it-callcenter-tickets
+
+Contributors  
+https://github.com/manojcodes93  
+https://github.com/vishwasvarma
+
+---
