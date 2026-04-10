@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# Virtual env
+myvenv/
+venv/
+
+# Node
+node_modules/
+npm-debug.log
+
+# Git
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+
+# Logs
+*.log
+
+# Env files
+.env
+
+# Model files (optional if large)
+*.pkl
+
+# Build folders
+dist/
+build/
