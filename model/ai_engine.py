@@ -1,9 +1,11 @@
 import pickle
 from model.retrieval import retrieve_solution
-from spellchecker import SpellChecker
 from groq import Groq
 import os
 from dotenv import load_dotenv
+from model.spell_checker import correct_spelling
+from model.classifier import classify_ticket, is_query_too_short
+
 load_dotenv()
 
 # Load classifier
@@ -13,19 +15,8 @@ model = pickle.load(open("model/model.pkl", "rb"))
 vectorizer = pickle.load(open("model/vectorizer.pkl", "rb"))
 
 # Spell checker
-spell = SpellChecker()
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-
-# Spell correction
-def correct_spelling(text):
-    corrected = []
-    for word in text.split():
-        corrected_word = spell.correction(word)
-        if corrected_word is None:
-            corrected_word = word
-        corrected.append(corrected_word)
-    return " ".join(corrected)
 
 def generate_with_groq(ticket_text, category, retrieved_solutions):
     solutions_text = "\n\n".join(
@@ -43,7 +34,14 @@ Here are similar past resolutions for reference:
 Write a clear, friendly, step-by-step support response directly addressing the user's issue.
 Use simple language. Format as numbered steps where applicable.
 Do not copy the past solutions verbatim — use them as context only.
-Keep the response concise and professional."""
+Keep the response concise and professional
+
+Guidelines:
+- Use simple and direct language
+- Do NOT include greetings like "Dear User"
+- Do NOT include signatures like "Best regards" or "IT Support Agent"
+- Keep it concise and practical
+- Focus only on solving the issue."""
 
     chat_completion = client.chat.completions.create(
         messages=[
@@ -58,57 +56,50 @@ Keep the response concise and professional."""
     return chat_completion.choices[0].message.content.strip()
 
 
-def solve_ticket(ticket_text):
+def solve_ticket(ticket_text: str) -> dict:
     try:
-        # Spell Correction
-        ticket_text = correct_spelling(ticket_text)
+        # Step 1 — Spell correction (symspellpy, Fix 1)
+        corrected_text = correct_spelling(ticket_text)
 
-        # Short query check
-        if len(ticket_text.split()) < 3:
+        # Step 2 — Short query guard + keyword pre-classifier + ML fallback (Fix 2 & 3)
+        result = classify_ticket(corrected_text, model, vectorizer)
+
+        # Short query or manual review from classifier
+        if result["band"] == "manual_review":
             return {
-                "category": "Unknown",
-                "confidence": 0.0,
-                "response": "Please provide more details about the issue."
+                "category":   result["category"],
+                "confidence": result["confidence"],
+                "band":       result["band"],
+                "source":     result.get("source", "unknown"),
+                "response":   result.get("message", "This issue requires manual review by a support agent."),
             }
 
-        # Classification
-        ticket_vec = vectorizer.transform([ticket_text])
-        category = model.predict(ticket_vec)[0]
+        category = str(result["category"]).replace("_", " ").title()
 
-        # Retrieval
-        solutions, scores = retrieve_solution(ticket_text)
+        # Step 3 — Semantic retrieval
+        solutions, scores = retrieve_solution(corrected_text)
 
-        # No solution found
-        if not solutions or len(scores) == 0:
+        if not solutions or not scores:
             return {
-                "category": "Unknown",
-                "confidence": 0.0,
-                "response": "No solution found. Please contact support."
+                "category":   category,
+                "confidence": result["confidence"],
+                "response":   "No similar resolutions found. Please contact support directly.",
             }
 
-        best_score = scores[0]
-
-        # Manual review threshold
-        if best_score < 0.45:
-            return {
-                "category": "Unknown",
-                "Confidence Score": round(best_score * 100, 2),
-                "response": "This issue requires manual review."
-            }
-
-        top_solutions = solutions[:3]
-        category_label = str(category).replace("_", " ").title()
-
-        # Generate response using Groq LLM
-        generated_response = generate_with_groq(ticket_text, category_label, top_solutions)
+        # Step 4 — LLM response generation
+        generated_response = generate_with_groq(corrected_text, category, solutions[:3])
 
         return {
-            "category": category_label,
-            "Confidence Score": round(best_score * 100, 2),
-            "response": generated_response
+            "user_view": {
+            "category": category,
+            "response": generated_response,
+            },
+            "internal": {
+            "confidence": result["confidence"],
+            "band": result["band"],
+            "source": result["source"],
+            }
         }
 
     except Exception as e:
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
