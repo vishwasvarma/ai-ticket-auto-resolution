@@ -1,6 +1,12 @@
 import pickle
 from model.retrieval import retrieve_solution
-from spellchecker import SpellChecker
+from groq import Groq
+import os
+from dotenv import load_dotenv
+from model.spell_checker import correct_spelling
+from model.classifier import classify_ticket, is_query_too_short
+
+load_dotenv()
 
 # Load classifier
 model = pickle.load(open("model/model.pkl", "rb"))
@@ -9,92 +15,91 @@ model = pickle.load(open("model/model.pkl", "rb"))
 vectorizer = pickle.load(open("model/vectorizer.pkl", "rb"))
 
 # Spell checker
-spell = SpellChecker()
+
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+def generate_with_groq(ticket_text, category, retrieved_solutions):
+    solutions_text = "\n\n".join(
+        [f"Past Resolution {i+1}:\n{sol}" for i, sol in enumerate(retrieved_solutions)]
+    )
+
+    prompt = f"""You are a helpful IT support agent. A user submitted this support ticket:
+
+Ticket: {ticket_text}
+Category: {category}
+
+Here are similar past resolutions for reference:
+{solutions_text}
+
+Write a clear, friendly, step-by-step support response directly addressing the user's issue.
+Use simple language. Format as numbered steps where applicable.
+Do not copy the past solutions verbatim — use them as context only.
+Keep the response concise and professional
+
+Guidelines:
+- Use simple and direct language
+- Do NOT include greetings like "Dear User"
+- Do NOT include signatures like "Best regards" or "IT Support Agent"
+- Keep it concise and practical
+- Focus only on solving the issue."""
+
+    chat_completion = client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": "You are a helpful IT support agent."},
+            {"role": "user", "content": prompt}
+        ],
+        model="llama-3.3-70b-versatile",  
+        temperature=0.4,
+        max_tokens=512,
+    )
+
+    return chat_completion.choices[0].message.content.strip()
 
 
-# Format response properly
-def format_response(text):
-
-    if not text:
-        return text
-
-    sentences = text.split(". ")
-    sentences = [s.strip().capitalize() for s in sentences]
-
-    formatted = ". ".join(sentences)
-
-    return formatted
-
-
-# Spell correction
-def correct_spelling(text):
-
-    corrected = []
-
-    for word in text.split():
-        corrected_word = spell.correction(word)
-
-        # Handle None from spellchecker
-        if corrected_word is None:
-            corrected_word = word
-
-        corrected.append(corrected_word)
-
-    return " ".join(corrected)
-
-
-def solve_ticket(ticket_text):
-
+def solve_ticket(ticket_text: str) -> dict:
     try:
+        # Step 1 — Spell correction (symspellpy, Fix 1)
+        corrected_text = correct_spelling(ticket_text)
 
-        # Spell Correction
-        ticket_text = correct_spelling(ticket_text)
+        # Step 2 — Short query guard + keyword pre-classifier + ML fallback (Fix 2 & 3)
+        result = classify_ticket(corrected_text, model, vectorizer)
 
-        # Classification
-        ticket_vec = vectorizer.transform([ticket_text])
-        category = model.predict(ticket_vec)[0]
-
-        # Retrieval
-        solutions, scores = retrieve_solution(ticket_text)
-
-        # No solution found
-        if not solutions or len(scores) == 0:
+        # Short query or manual review from classifier
+        if result["band"] == "manual_review":
             return {
-                "category": "Unknown",
-                "confidence": 0.0,
-                "response": "No solution found. Please contact support."
+                "category":   result["category"],
+                "confidence": result["confidence"],
+                "band":       result["band"],
+                "source":     result.get("source", "unknown"),
+                "response":   result.get("message", "This issue requires manual review by a support agent."),
             }
 
-        best_solution = solutions[0]
-        best_score = scores[0]
+        category = str(result["category"]).replace("_", " ").title()
 
-        # Short query check
-        if len(ticket_text.split()) < 3:
+        # Step 3 — Semantic retrieval
+        solutions, scores = retrieve_solution(corrected_text)
+
+        if not solutions or not scores:
             return {
-                "category": "Unknown",
-                "confidence": 0.0,
-                "response": "Please provide more details about the issue."
+                "category":   category,
+                "confidence": result["confidence"],
+                "response":   "No similar resolutions found. Please contact support directly.",
             }
 
-        # Manual review threshold
-        if best_score < 0.45:
-            return {
-                "category": "Unknown",
-                "Confidence Score": round(best_score * 100, 2),
-                "response": "This issue requires manual review."
-            }
-
-        # Format response
-        formatted_response = format_response(best_solution)
+        # Step 4 — LLM response generation
+        generated_response = generate_with_groq(corrected_text, category, solutions[:3])
 
         return {
-            "category": str(category).replace("_", " ").title(),
-            "Confidence Score": round(best_score * 100, 2),
-            "response": formatted_response
+            "user_view": {
+            "category": category,
+            "response": generated_response,
+            },
+            "internal": {
+            "confidence": result["confidence"],
+            "band": result["band"],
+            "source": result["source"],
+            }
         }
 
     except Exception as e:
-
-        return {
-            "error": str(e)
-        }
+        return {"error": str(e)}
