@@ -31,23 +31,56 @@ def create_ticket(
     db: Session = Depends(get_db)
 ):
     try:
+
         ticket_number = generate_ticket_number()
 
         ai_result = solve_ticket(data.description)
+
+        print("AI RESULT:", ai_result)
 
         category = "Unknown"
         response = "No response"
         confidence = 0
 
         if isinstance(ai_result, dict):
-            category = ai_result.get("category", "Unknown")
-            response = ai_result.get("response", "No response")
 
-            confidence = (
-                ai_result.get("Confidence Score")
-                or ai_result.get("confidence")
-                or 0
-            )
+            # Error case
+            if "error" in ai_result:
+
+                response = ai_result["error"]
+
+            # Manual review case
+            elif "response" in ai_result:
+
+                category = ai_result.get("category", "Unknown")
+
+                response = ai_result.get(
+                    "response",
+                    "Manual review required"
+                )
+
+                confidence = ai_result.get(
+                    "confidence",
+                    0
+                )
+
+            # Normal AI case
+            elif "user_view" in ai_result:
+
+                category = ai_result["user_view"].get(
+                    "category",
+                    "Unknown"
+                )
+
+                response = ai_result["user_view"].get(
+                    "response",
+                    "No response generated"
+                )
+
+                confidence = ai_result["internal"].get(
+                    "confidence",
+                    0
+                )
 
         status = decide_status(float(confidence))
 
@@ -55,8 +88,8 @@ def create_ticket(
             ticket_number=ticket_number,
             title=data.title,
             description=data.description,
-            category=str(category),
-            response=str(response),
+            category=category,
+            response=response,
             status=status,
             user_id=current_user.id
         )
@@ -64,17 +97,27 @@ def create_ticket(
         db.add(new_ticket)
         db.commit()
         db.refresh(new_ticket)
-
         return {
-            "title": data.title,
+
             "ticket_number": ticket_number,
+
+            "title": data.title,
+
             "category": category,
-            "response": response
+
+            "response": response,
+
+            "status": status
+
         }
 
     except Exception as e:
-        return {"error": str(e)}
 
+        return {
+
+            "error": str(e)
+
+        }
 
 @router.get("")
 def get_tickets(

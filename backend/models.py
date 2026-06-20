@@ -5,6 +5,7 @@ from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = {"extend_existing": True} 
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String)
@@ -14,6 +15,7 @@ class User(Base):
 
 class Ticket(Base):
     __tablename__ = "tickets"
+    __table_args__ = {"extend_existing": True}
 
     id = Column(Integer, primary_key=True, index=True)
     ticket_number = Column(String, unique=True, index=True, nullable=False)
